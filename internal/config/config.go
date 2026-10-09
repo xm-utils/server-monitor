@@ -120,7 +120,7 @@ func Default() *Config {
 }
 
 // Load 按优先级查找配置文件并加载，随后应用环境变量覆盖（前缀 SMS_）。
-// 查找顺序：显式 path -> /etc/server_monitor_service/config.yaml -> ./config.yaml。
+// 查找顺序：显式 path -> /etc/server_monitor/config.yaml -> ./config.yaml。
 func Load(path string) (*Config, error) {
 	cfg := Default()
 

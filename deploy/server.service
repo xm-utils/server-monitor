@@ -1,11 +1,11 @@
-# server_monitor_service systemd 单元文件（CentOS 7+/RHEL/Rocky/Alma）
+# server_monitor systemd 单元文件（CentOS 7+/RHEL/Rocky/Alma）
 #
 # 安装步骤（以 root 执行）：
 #   1) 安装二进制（Linux 静态包，见 README：GOTOOLCHAIN=go1.24.2 make build-linux）
 #      install -m 0755 server-monitor-linux-amd64 /usr/local/bin/server-monitor
 #   2) 安装配置
-#      mkdir -p /etc/server_monitor_service
-#      cp configs/config.example.yaml /etc/server_monitor_service/config.yaml
+#      mkdir -p /etc/server_monitor
+#      cp configs/config.example.yaml /etc/server_monitor/config.yaml
 #      # 编辑 config.yaml：生产建议 server.listen_addr 设为 127.0.0.1:8080
 #   3) 安装本单元
 #      cp deploy/server-monitor.service /etc/systemd/system/server-monitor.service
@@ -25,15 +25,15 @@
 
 [Unit]
 Description=Server Monitor Service (system & Docker metrics)
-Documentation=https://github.com/xm-utils/server_monitor_service
+Documentation=https://github.com/xm-utils/server-monitor
 After=network-online.target docker.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 
-# 二进制与配置：-config 可省略，程序会自动查找 /etc/server_monitor_service/config.yaml
-ExecStart=/usr/local/bin/server-monitor -config /etc/server_monitor_service/config.yaml
+# 二进制与配置：-config 可省略，程序会自动查找 /etc/server_monitor/config.yaml
+ExecStart=/usr/local/bin/server-monitor -config /etc/server_monitor/config.yaml
 
 Restart=always
 RestartSec=3

@@ -1,4 +1,4 @@
-# server_monitor_service 服务端（agent）配置示例
+# server_monitor 服务端（agent）配置示例
 # 部署到每台被监控的服务器上
 
 server:

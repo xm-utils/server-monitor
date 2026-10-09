@@ -228,9 +228,9 @@ scp bin/server-monitor-linux-amd64 user@host:/usr/local/bin/server-monitor
 scp bin/admin-monitor-linux-amd64 user@host:/usr/local/bin/admin-monitor
 
 # 2. 安装配置
-mkdir -p /etc/server_monitor_service
-cp configs/server.example.yaml /etc/server_monitor_service/server.yaml
-cp configs/admin.example.yaml /etc/server_monitor_service/admin.yaml
+mkdir -p /etc/server_monitor
+cp configs/server.example.yaml /etc/server_monitor/server.yaml
+cp configs/admin.example.yaml /etc/server_monitor/admin.yaml
 
 # 3. 安装 systemd 单元
 cp deploy/server.service /etc/systemd/system/server-monitor.service

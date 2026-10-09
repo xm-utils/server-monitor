@@ -1,4 +1,4 @@
-# server_monitor_service 管理端（admin）配置示例
+# server_monitor 管理端（admin）配置示例
 # 部署到管理服务器上，集中监控所有 agent
 
 admin:
