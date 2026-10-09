@@ -1,0 +1,184 @@
+{{define "admin_detail.html"}}
+{{template "head" .}}
+{{template "topbar" .}}
+
+<main class="container">
+    {{if .NotFound}}
+    <div class="empty-state">
+        <p>服务器不存在</p>
+        <a href="/" class="btn">返回列表</a>
+    </div>
+    {{else}}
+    <div class="server-header">
+        <h2>服务器详情: {{.Server.Hostname}}</h2>
+        <span class="status {{.Server.Status}}">{{.Server.Status}}</span>
+        <a href="/" class="btn btn-secondary">返回列表</a>
+    </div>
+
+    <!-- Tab 导航 -->
+    <div class="tab-nav">
+        <button class="tab-btn active" data-tab="server-tab" onclick="switchTab(this)">服务器信息</button>
+        {{if .DockerAvail}}
+        <button class="tab-btn" data-tab="docker-tab" onclick="switchTab(this)">Docker 服务</button>
+        {{end}}
+        <button class="tab-btn" data-tab="errors-tab" onclick="switchTab(this)">异常记录{{if .Errors}} <span class="tab-badge">{{len .Errors}}</span>{{end}}</button>
+    </div>
+
+    <!-- ==================== Tab 1: 服务器信息（内容参考 templates/index.html） ==================== -->
+    <div id="server-tab" class="tab-content active">
+        {{if .Sys}}
+        <div class="topbar" style="background:#2b3648; border-radius:6px; padding:12px 16px; margin-bottom:16px;">
+            <div class="meta" style="color:#cfd6e0;">{{.Sys.Hostname}} · {{.Sys.Os}} {{.Sys.KernelVer}} · 运行 {{humanizeDuration .Sys.UptimeSec}} · 进程 {{.Sys.Procs}}</div>
+            <div class="muted" style="color:#cfd6e0; margin-top:4px;">采集时间 {{fmtTime .Sys.Timestamp}}</div>
+        </div>
+
+        <div class="cards">
+            <div class="card">
+                <div class="label">CPU 使用率</div>
+                <div class="value {{cpuClass .Sys.CpuPercent}}">{{fmtPercent .Sys.CpuPercent}}</div>
+                <div class="muted">{{.Sys.CpuCores}} 核 · Load {{.Sys.CpuLoad1}}/{{.Sys.CpuLoad5}}/{{.Sys.CpuLoad15}}</div>
+            </div>
+            <div class="card">
+                <div class="label">内存使用率</div>
+                <div class="value {{memClass .Sys.MemPercent}}">{{fmtPercent .Sys.MemPercent}}</div>
+                <div class="muted">{{humanizeBytes .Sys.MemUsed}} / {{humanizeBytes .Sys.MemTotal}}</div>
+            </div>
+            <div class="card">
+                <div class="label">网络吞吐</div>
+                <div class="value">{{humanizeRate .Sys.NetRateIn}}</div>
+                <div class="muted">↑ {{humanizeRate .Sys.NetRateOut}}</div>
+            </div>
+            <div class="card">
+                <div class="label">Docker 容器</div>
+                <div class="value">{{.Sys.DockerRunning}}</div>
+                <div class="muted">运行 / 共 {{.Sys.DockerTotal}}</div>
+            </div>
+        </div>
+
+        <div class="panel trend">
+            <h3>CPU 趋势（最近 {{.HistCount}} 次采样）</h3>
+            <svg viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="{{.CpuTrend}}"></polyline></svg>
+            <h3 style="margin-top:14px;">内存趋势</h3>
+            <svg viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="{{.MemTrend}}"></polyline></svg>
+        </div>
+
+        <div class="panel">
+            <h3>磁盘分区</h3>
+            <table class="server-table">
+                <thead><tr><th>挂载点</th><th>文件系统</th><th>总量</th><th>已用</th><th>可用</th><th>使用率</th></tr></thead>
+                <tbody>
+                {{range .Sys.Disks}}
+                    <tr>
+                        <td>{{.Path}}</td><td class="muted">{{.Fstype}}</td>
+                        <td>{{humanizeBytes .TotalBytes}}</td>
+                        <td>{{humanizeBytes .UsedBytes}}</td>
+                        <td>{{humanizeBytes .FreeBytes}}</td>
+                        <td class="{{diskClass .UsedPercent}}">{{fmtPercent .UsedPercent}}</td>
+                    </tr>
+                {{else}}
+                    <tr><td colspan="6" class="empty">暂无磁盘数据</td></tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3>Top CPU 进程</h3>
+            <table class="server-table">
+                <thead><tr><th>PID</th><th>命令</th><th>CPU%</th><th>MEM%</th><th>RSS</th></tr></thead>
+                <tbody>
+                {{range .Sys.TopCpu}}
+                    <tr><td>{{.Pid}}</td><td>{{.Name}}</td><td>{{fmtPercent .CpuPercent}}</td><td>{{fmtPercent .MemPercent}}</td><td>{{humanizeBytes .RssBytes}}</td></tr>
+                {{else}}
+                    <tr><td colspan="5" class="empty">暂无进程数据</td></tr>
+                {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="empty-state">
+            <p>系统指标加载失败，请稍后刷新</p>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- ==================== Tab 2: Docker 服务（内容参考 templates/docker.html） ==================== -->
+    {{if .DockerAvail}}
+    <div id="docker-tab" class="tab-content">
+        <div class="panel">
+            <h3>Docker 服务监控</h3>
+            {{if not .DockerResult.Available}}
+                <div class="empty">⚠ {{if .DockerResult.Message}}{{.DockerResult.Message}}{{else}}Docker 未连接{{end}}，请检查 docker.sock 与运行状态。</div>
+            {{else}}
+            <table class="server-table">
+                <thead>
+                    <tr>
+                        <th>名称</th><th>镜像</th><th>状态</th><th>CPU%</th><th>内存</th>
+                        <th>NET ↓/↑</th><th>磁盘 读/写</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {{range .DockerResult.Containers}}
+                    <tr>
+                        <td><a href="/servers/{{$.ServerID}}/docker/{{.Id}}">{{.Name}}</a> <span class="muted">{{.Id}}</span></td>
+                        <td class="muted">{{.Image}}</td>
+                        <td><span class="badge {{.State}}">{{.State}}</span></td>
+                        <td>{{fmtPercent .CpuPercent}}</td>
+                        <td>{{humanizeBytes .MemUsage}} <span class="muted">/ {{humanizeBytes .MemLimit}}</span></td>
+                        <td>{{humanizeRate .NetRxRate}} / {{humanizeRate .NetTxRate}}</td>
+                        <td>{{humanizeRate .BlkReadRate}} / {{humanizeRate .BlkWriteRate}}</td>
+                    </tr>
+                {{else}}
+                    <tr><td colspan="7" class="empty">没有容器</td></tr>
+                {{end}}
+                </tbody>
+            </table>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+
+    <!-- ==================== Tab 3: 异常记录 ==================== -->
+    <div id="errors-tab" class="tab-content">
+        {{if .Errors}}
+        <div class="error-panel">
+            <h3>⚠️ 最近异常 ({{len .Errors}})</h3>
+            <ul class="error-list">
+                {{range .Errors}}
+                <li class="error-item {{.Severity}}">
+                    <span class="error-time">{{.Timestamp | formatTime}}</span>
+                    <span class="error-component">[{{.Component}}]</span>
+                    <span class="error-message">{{.Message}}</span>
+                </li>
+                {{end}}
+            </ul>
+        </div>
+        {{else}}
+        <div class="no-errors">
+            <p>✅ 暂无异常记录</p>
+        </div>
+        {{end}}
+    </div>
+
+    {{end}}
+</main>
+
+<script>
+// Tab 切换
+function switchTab(btn) {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    btn.classList.add('active');
+    var tabId = btn.getAttribute('data-tab');
+    document.getElementById(tabId).classList.add('active');
+}
+
+// 自动刷新（10 秒）
+var serverId = "{{.ServerID}}";
+if (serverId) {
+    setInterval(function() { location.reload(); }, 10000);
+}
+</script>
+
+{{template "foot" .}}
+{{end}}

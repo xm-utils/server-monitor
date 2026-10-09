@@ -1,0 +1,13 @@
+# server_monitor_service 管理端（admin）配置示例
+# 部署到管理服务器上，集中监控所有 agent
+
+admin:
+  listen_addr: ":9090"        # HTTP Web UI
+  grpc_addr: ":9091"          # gRPC 服务（agent 注册/上报）
+  poll_interval: 10s          # 健康检查间隔
+  heartbeat_timeout: 90s      # 心跳超时（超过此时间标记 offline）
+  poll_timeout: 5s            # gRPC 调用超时
+
+log:
+  level: info
+  format: text

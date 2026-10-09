@@ -1,0 +1,54 @@
+# server_monitor_service 管理端 systemd 单元文件（CentOS 7+/RHEL/Rocky/Alma）
+#
+# 安装步骤（以 root 执行）：
+#   1) 安装二进制
+#      install -m 0755 admin-monitor-linux-amd64 /usr/local/bin/admin-monitor
+#   2) 安装配置
+#      mkdir -p /etc/server_monitor_service
+#      cp configs/admin.example.yaml /etc/server_monitor_service/admin.yaml
+#      # 编辑 admin.yaml：生产建议 admin.listen_addr 设为 127.0.0.1:9090
+#   3) 安装本单元
+#      cp deploy/admin.service /etc/systemd/system/admin-monitor.service
+#   4) 启动并开机自启
+#      systemctl daemon-reload
+#      systemctl enable --now admin-monitor
+#   5) 查看状态与日志
+#      systemctl status admin-monitor
+#      journalctl -u admin-monitor -f
+
+[Unit]
+Description=Server Monitor Admin (management & dashboard)
+Documentation=https://github.com/xm-utils/server_monitor_service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+ExecStart=/usr/local/bin/admin-monitor -config /etc/server_monitor_service/admin.yaml
+
+Restart=always
+RestartSec=3
+
+WorkingDirectory=/var/lib/admin-monitor
+
+User=root
+Group=root
+
+Environment=GIN_MODE=release
+Environment=SMS_LOG_LEVEL=info
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=admin-monitor
+
+StateDirectory=admin-monitor
+StateDirectoryMode=0755
+
+LimitNOFILE=65535
+TimeoutStopSec=15
+KillSignal=SIGINT
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

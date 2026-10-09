@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+package monitor;
+
+option go_package = "server_monitor_service/internal/protocol/pb";
+
+// ===== 公共消息 =====
+
+message SystemMetrics {
+  // 基础指标（向后兼容）
+  double cpu_percent = 1;
+  double mem_percent = 2;
+  double disk_percent = 3;
+  uint64 mem_total = 4;
+  uint64 mem_used = 5;
+  uint64 disk_total = 6;
+  uint64 disk_used = 7;
+  int64 timestamp = 8;
+  string hostname = 9;
+  double net_rate_in = 10;
+  double net_rate_out = 11;
+  bool docker_available = 12;
+  int32 docker_total = 13;
+  int32 docker_running = 14;
+  int32 docker_stopped = 15;
+
+  // 扩展字段（服务器详情 Tab 用）
+  string os = 16;
+  string kernel_ver = 17;
+  uint64 uptime_sec = 18;
+  int32 procs = 19;
+  int32 cpu_cores = 20;
+  double cpu_load1 = 21;
+  double cpu_load5 = 22;
+  double cpu_load15 = 23;
+  uint64 mem_available = 24;
+  uint64 swap_total = 25;
+  uint64 swap_used = 26;
+  uint64 swap_free = 27;
+  repeated DiskInfo disks = 28;
+  repeated ProcessInfo top_cpu = 29;
+  repeated ProcessInfo top_mem = 30;
+}
+
+message DiskInfo {
+  string path = 1;
+  string fstype = 2;
+  uint64 total_bytes = 3;
+  uint64 used_bytes = 4;
+  uint64 free_bytes = 5;
+  double used_percent = 6;
+}
+
+message ProcessInfo {
+  int32 pid = 1;
+  string name = 2;
+  double cpu_percent = 3;
+  double mem_percent = 4;
+  uint64 rss_bytes = 5;
+}
+
+message SystemHistoryEntry {
+  int64 timestamp = 1;
+  double cpu_percent = 2;
+  double mem_percent = 3;
+}
+
+message DockerListResult {
+  bool available = 1;
+  string message = 2;
+  repeated DockerContainer containers = 3;
+}
+
+message DockerContainer {
+  string id = 1;
+  string name = 2;
+  string image = 3;
+  string state = 4;
+  double cpu_percent = 5;
+  double mem_percent = 6;
+  uint64 mem_usage = 7;
+  uint64 mem_limit = 8;
+  int64 timestamp = 9;
+  double net_rx_rate = 10;
+  double net_tx_rate = 11;
+  double blk_read_rate = 12;
+  double blk_write_rate = 13;
+  // 详情字段
+  string status = 14;
+  string health = 15;
+  int64 started_at = 16;
+  int32 restart_count = 17;
+  uint64 pids_current = 18;
+  // 容器详情字段（列表页可空）
+  repeated string env = 19;
+  repeated DockerMount mounts = 20;
+  map<string, DockerPortBindings> port_bindings = 21;
+  repeated DockerNetworkInterface network_interfaces = 22;
+}
+
+message DockerMount {
+  string type = 1;
+  string source = 2;
+  string destination = 3;
+  bool rw = 4;
+}
+
+message DockerPortBindings {
+  repeated string host = 1;
+}
+
+message DockerNetworkInterface {
+  string name = 1;
+  string ip_address = 2;
+  string gateway = 3;
+  string mac_address = 4;
+}
+
+// ===== AdminService（服务端 → 管理端） =====
+
+message RegisterRequest {
+  string hostname = 1;
+  string ip = 2;
+  int32 port = 3;
+  string os_name = 4;
+  string arch = 5;
+  repeated string capabilities = 6;
+  int32 grpc_port = 7;
+}
+
+message RegisterResponse {
+  string id = 1;
+  int32 heartbeat_sec = 2;
+}
+
+message ErrorReport {
+  string server_id = 1;
+  string component = 2;
+  string message = 3;
+  int64 timestamp = 4;
+  string severity = 5;
+}
+
+message ErrorReportResponse {}
+
+// ===== ServerService（管理端 → 服务端） =====
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string version = 2;
+  int64 timestamp = 3;
+}
+
+message GetSystemMetricsRequest {}
+
+message GetSystemMetricsResponse {
+  SystemMetrics metrics = 1;
+}
+
+message GetSystemHistoryRequest {
+  int32 limit = 1;
+}
+
+message GetSystemHistoryResponse {
+  repeated SystemHistoryEntry entries = 1;
+}
+
+message GetDockerMetricsRequest {}
+
+message GetDockerMetricsResponse {
+  repeated DockerContainer containers = 1;
+}
+
+message GetDockerListRequest {}
+
+message GetDockerListResponse {
+  DockerListResult result = 1;
+}
+
+message GetDockerContainerDetailRequest {
+  string container_id = 1;
+}
+
+message GetDockerContainerDetailResponse {
+  DockerContainer container = 1;
+  bool not_found = 2;
+}
+
+// ===== 服务定义 =====
+
+service AdminService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc ReportError(ErrorReport) returns (ErrorReportResponse);
+}
+
+service ServerService {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetSystemMetrics(GetSystemMetricsRequest) returns (GetSystemMetricsResponse);
+  rpc GetSystemHistory(GetSystemHistoryRequest) returns (GetSystemHistoryResponse);
+  rpc GetDockerMetrics(GetDockerMetricsRequest) returns (GetDockerMetricsResponse);
+  rpc GetDockerList(GetDockerListRequest) returns (GetDockerListResponse);
+  rpc GetDockerContainerDetail(GetDockerContainerDetailRequest) returns (GetDockerContainerDetailResponse);
+}

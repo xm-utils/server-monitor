@@ -1,0 +1,23 @@
+{{define "head"}}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Server Monitor</title>
+  <link rel="stylesheet" href="/monitor/static/css/style.css">
+</head>
+{{end}}
+
+{{define "topbar"}}
+<div class="topbar">
+  <div><strong>Server Monitor</strong> · {{.Title}}</div>
+  <div class="meta">
+    <a href="/monitor">系统概览</a>
+    <a href="/monitor/docker">Docker 服务</a>
+  </div>
+</div>
+{{end}}
+
+{{define "foot"}}
+<script src="/monitor/static/js/ops.js"></script>
+{{if gt .RefreshMs 0}}<script>setTimeout(function(){location.reload();}, {{.RefreshMs}});</script>{{end}}
+{{end}}

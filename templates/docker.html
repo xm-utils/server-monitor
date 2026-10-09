@@ -1,0 +1,56 @@
+{{define "docker.html"}}
+<!DOCTYPE html>
+<html>
+{{template "head" .}}
+<body>
+<div class="container">
+  {{template "topbar" .}}
+
+  <div class="panel">
+    <h3>Docker 服务监控</h3>
+    <pre id="op-result" class="op-result" hidden></pre>
+    {{if not .Docker.Available}}
+      <div class="empty">⚠ {{if .Docker.Message}}{{.Docker.Message}}{{else}}Docker 未连接{{end}}，请检查 docker.sock 与运行状态。</div>
+    {{else}}
+    <table>
+      <thead>
+        <tr>
+          <th>名称</th><th>镜像</th><th>状态</th><th>CPU%</th><th>内存</th>
+          <th>NET ↓/↑</th><th>磁盘 读/写</th>
+          {{if .OpsEnabled}}<th>操作</th>{{end}}
+        </tr>
+      </thead>
+      <tbody>
+      {{range .Docker.Containers}}
+        <tr>
+          <td><a href="/monitor/docker/{{.ContainerID}}">{{.Name}}</a> <span class="muted">{{.ContainerID}}</span></td>
+          <td class="muted">{{.Image}}</td>
+          <td><span class="badge {{.State}}">{{.State}}</span></td>
+          <td>{{fmtPercent .CPUPercent}}</td>
+          <td>{{humanizeBytes .MemUsageBytes}} <span class="muted">/ {{humanizeBytes .MemLimitBytes}}</span></td>
+          <td>{{humanizeRate .NetRxRate}} / {{humanizeRate .NetTxRate}}</td>
+          <td>{{humanizeRate .BlkReadRate}} / {{humanizeRate .BlkWriteRate}}</td>
+          {{if $.OpsEnabled}}
+          <td>
+            {{if eq .State "running"}}
+              <button class="btn" data-id="{{.ContainerID}}" data-action="restart" onclick="smsOp('{{.ContainerID}}','restart')">重启</button>
+              <button class="btn danger" data-id="{{.ContainerID}}" data-action="stop" onclick="smsOp('{{.ContainerID}}','stop')">停止</button>
+            {{else}}
+              <button class="btn" data-id="{{.ContainerID}}" data-action="start" onclick="smsOp('{{.ContainerID}}','start')">启动</button>
+            {{end}}
+            <button class="btn warn" data-id="{{.ContainerID}}" data-action="redeploy" onclick="smsOp('{{.ContainerID}}','redeploy')">重建</button>
+          </td>
+          {{end}}
+        </tr>
+      {{else}}
+        <tr><td colspan="8" class="empty">没有容器</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{end}}
+  </div>
+</div>
+{{template "foot" .}}
+</body>
+</html>
+{{end}}

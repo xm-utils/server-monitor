@@ -1,0 +1,77 @@
+{{define "index.html"}}
+<!DOCTYPE html>
+<html>
+{{template "head" .}}
+<body>
+<div class="container">
+  {{template "topbar" .}}
+
+  <div class="topbar" style="background:#2b3648;">
+    <div class="meta">{{.Sys.Hostname}} · {{.Sys.OS}} {{.Sys.KernelVer}} · 运行 {{humanizeDuration .Sys.UptimeSec}} · 进程 {{.Sys.Procs}}</div>
+    <div class="muted" style="color:#cfd6e0;">采集时间 {{fmtTime .Sys.Timestamp}}</div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="label">CPU 使用率</div>
+      <div class="value {{cpuClass .Sys.CPU.UsageTotal}}">{{fmtPercent .Sys.CPU.UsageTotal}}</div>
+      <div class="muted">{{.Sys.CPU.Cores}} 核 · Load {{.Sys.CPU.Load1}}/{{.Sys.CPU.Load5}}/{{.Sys.CPU.Load15}}</div>
+    </div>
+    <div class="card"><div class="label">内存使用率</div>
+      <div class="value {{memClass .Sys.Memory.UsedPercent}}">{{fmtPercent .Sys.Memory.UsedPercent}}</div>
+      <div class="muted">{{humanizeBytes .Sys.Memory.UsedBytes}} / {{humanizeBytes .Sys.Memory.TotalBytes}}</div>
+    </div>
+    <div class="card"><div class="label">网络吞吐</div>
+      <div class="value">{{humanizeRate .Sys.NetSpeed.RateInBytes}}</div>
+      <div class="muted">↑ {{humanizeRate .Sys.NetSpeed.RateOutBytes}}</div>
+    </div>
+    <div class="card"><div class="label">Docker 容器</div>
+      <div class="value">{{.Docker.Running}}</div>
+      <div class="muted">运行 / 共 {{.Docker.Total}} · <a href="/monitor/docker">查看 ►</a></div>
+    </div>
+  </div>
+
+  <div class="panel trend">
+    <h3>CPU 趋势（最近 {{.HistCount}} 次采样）</h3>
+    <svg viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="{{.CpuTrend}}"></polyline></svg>
+    <h3 style="margin-top:14px;">内存趋势</h3>
+    <svg viewBox="0 0 300 60" preserveAspectRatio="none"><polyline points="{{.MemTrend}}"></polyline></svg>
+  </div>
+
+  <div class="panel">
+    <h3>磁盘分区</h3>
+    <table>
+      <thead><tr><th>挂载点</th><th>文件系统</th><th>总量</th><th>已用</th><th>可用</th><th>使用率</th></tr></thead>
+      <tbody>
+      {{range .Sys.Disks}}
+        <tr>
+          <td>{{.Path}}</td><td class="muted">{{.Fstype}}</td>
+          <td>{{humanizeBytes .TotalBytes}}</td>
+          <td>{{humanizeBytes .UsedBytes}}</td>
+          <td>{{humanizeBytes .FreeBytes}}</td>
+          <td class="{{diskClass .UsedPercent}}">{{fmtPercent .UsedPercent}}</td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="empty">暂无磁盘数据</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>Top CPU 进程</h3>
+    <table>
+      <thead><tr><th>PID</th><th>命令</th><th>CPU%</th><th>MEM%</th><th>RSS</th></tr></thead>
+      <tbody>
+      {{range .Sys.TopCPU}}
+        <tr><td>{{.PID}}</td><td>{{.Name}}</td><td>{{fmtPercent .CPUPercent}}</td><td>{{fmtPercent .MemPercent}}</td><td>{{humanizeBytes .RssBytes}}</td></tr>
+      {{else}}
+        <tr><td colspan="5" class="empty">暂无进程数据</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{template "foot" .}}
+</body>
+</html>
+{{end}}

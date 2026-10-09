@@ -1,0 +1,38 @@
+# server_monitor_service 服务端（agent）配置示例
+# 部署到每台被监控的服务器上
+
+server:
+  listen_addr: ":8080"        # HTTP API（容器操作等）
+  grpc_addr: ":8081"          # gRPC 服务（管理端调用）
+  admin_url: "http://192.168.1.100:9091"  # 管理端 gRPC 地址（必填）
+  heartbeat_interval: 30s     # 心跳间隔
+  read_timeout: 10s
+  write_timeout: 30s
+
+collector:
+  system_interval: 3s
+  docker_interval: 5s
+  history_size: 300
+
+docker:
+  enabled: true
+  endpoint: "unix:///var/run/docker.sock"
+  timeout: 3s
+  api_version: "v1.43"
+  operations:
+    enabled: false             # 容器写操作默认关闭
+    default_timeout: 10s
+    allow_labels: []
+    deny_names: []
+    compose_command: "docker compose"
+    docker_bin: "docker"
+    redeploy_timeout: 5m
+
+log:
+  level: info
+  format: text
+
+web:
+  refresh_interval_ms: 5000
+  template_dir: "./templates"
+  static_dir: "./static"

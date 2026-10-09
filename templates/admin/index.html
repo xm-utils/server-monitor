@@ -1,0 +1,48 @@
+{{define "admin_index.html"}}
+{{template "head" .}}
+{{template "topbar" .}}
+
+<main class="container">
+    <h2>服务器列表</h2>
+    
+    {{if .Servers}}
+    <table class="server-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>主机名</th>
+                <th>IP</th>
+                <th>状态</th>
+                <th>OS</th>
+                <th>最后心跳</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Servers}}
+            <tr class="{{if eq .Status "online"}}online{{else}}offline{{end}}">
+                <td><code>{{.ID}}</code></td>
+                <td>{{.Hostname}}</td>
+                <td>{{.IP}}</td>
+                <td>
+                    <span class="status {{.Status}}">{{.Status}}</span>
+                </td>
+                <td>{{.OS}}/{{.Arch}}</td>
+                <td>{{.LastSeen.Format "2006-01-02 15:04:05"}}</td>
+                <td>
+                    <a href="/servers/{{.ID}}" class="btn">详情</a>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <div class="empty-state">
+        <p>暂无已注册的服务器</p>
+        <p class="hint">请确保服务端已启动并配置了正确的 admin_url</p>
+    </div>
+    {{end}}
+</main>
+
+{{template "foot" .}}
+{{end}}

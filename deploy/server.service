@@ -1,0 +1,75 @@
+# server_monitor_service systemd 单元文件（CentOS 7+/RHEL/Rocky/Alma）
+#
+# 安装步骤（以 root 执行）：
+#   1) 安装二进制（Linux 静态包，见 README：GOTOOLCHAIN=go1.24.2 make build-linux）
+#      install -m 0755 server-monitor-linux-amd64 /usr/local/bin/server-monitor
+#   2) 安装配置
+#      mkdir -p /etc/server_monitor_service
+#      cp configs/config.example.yaml /etc/server_monitor_service/config.yaml
+#      # 编辑 config.yaml：生产建议 server.listen_addr 设为 127.0.0.1:8080
+#   3) 安装本单元
+#      cp deploy/server-monitor.service /etc/systemd/system/server-monitor.service
+#   4) 启动并开机自启
+#      systemctl daemon-reload
+#      systemctl enable --now server-monitor
+#   5) 查看状态与日志
+#      systemctl status server-monitor
+#      journalctl -u server-monitor -f
+#
+# 说明：
+#   - HTML 模板与静态资源已 go:embed 进二进制，无需随附 templates/、static/。
+#   - 若需使用 Docker 指标采集与容器启停/重建（FR-13），进程必须能访问
+#     /var/run/docker.sock；以 root 运行默认可访问。若改用专用用户，需将其加入 docker 组：
+#         useradd -r -s /sbin/nologin server-monitor && usermod -aG docker server-monitor
+#     并放开下方 User/Group 注释、且确保 docker.sock 组权限生效。
+
+[Unit]
+Description=Server Monitor Service (system & Docker metrics)
+Documentation=https://github.com/xm-utils/server_monitor_service
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# 二进制与配置：-config 可省略，程序会自动查找 /etc/server_monitor_service/config.yaml
+ExecStart=/usr/local/bin/server-monitor -config /etc/server_monitor_service/config.yaml
+
+Restart=always
+RestartSec=3
+
+# 工作目录（模板已内嵌，此处仅为日志/相对路径兜底）
+WorkingDirectory=/var/lib/server-monitor
+
+# 运行身份：默认 root 以便访问 docker.sock；如需降权见文件顶部说明
+User=root
+Group=root
+
+# 环境变量（可选，覆盖配置中的关键字段，前缀 SMS_）
+Environment=GIN_MODE=release
+Environment=SMS_LOG_LEVEL=info
+# Environment=SMS_LISTEN_ADDR=127.0.0.1:8080
+
+# 标准输出/错误交给 journald 收集（logrus 默认写 stderr）
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=server-monitor
+
+# 自动创建可写的运行目录（存放日志等；此处仅占位）
+StateDirectory=server-monitor
+StateDirectoryMode=0755
+
+# 资源与安全加固（按需放开；放开前请确认 docker.sock 访问不受影响）
+LimitNOFILE=65535
+TimeoutStopSec=15
+KillSignal=SIGINT
+KillMode=mixed
+
+# 如需更严格的沙箱，可放开以下项（注意：ProtectSystem/ProtectHome 一般无碍；
+# 使用 Docker 写操作时不要屏蔽 /var/run/docker.sock）
+# ProtectSystem=full
+# ProtectHome=true
+# NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

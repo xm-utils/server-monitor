@@ -1,0 +1,162 @@
+{{define "admin_docker_detail.html"}}
+{{template "head" .}}
+{{template "topbar" .}}
+
+<main class="container">
+    {{if .NotFound}}
+    <div class="empty-state">
+        <p>{{if .Error}}{{.Error}}{{else}}未找到容器或服务器不存在{{end}}</p>
+        <a href="/" class="btn">返回列表</a>
+    </div>
+    {{else}}
+    <div class="server-header">
+        <h2>{{.Container.Name}} <span class="muted">{{.Container.Id | shortID}}</span>
+            <span class="badge state-{{.Container.State}}">{{.Container.State}}</span>
+        </h2>
+        <a href="/servers/{{.Server.ID}}" class="btn btn-secondary">返回服务器详情</a>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>基本信息</h3>
+            <dl>
+                <dt>容器 ID</dt>
+                <dd><code>{{.Container.Id}}</code></dd>
+                <dt>名称</dt>
+                <dd>{{.Container.Name}}</dd>
+                <dt>镜像</dt>
+                <dd>{{.Container.Image}}</dd>
+                <dt>状态</dt>
+                <dd><span class="badge state-{{.Container.State}}">{{.Container.State}}</span></dd>
+                <dt>健康</dt>
+                <dd>{{if .Container.Health}}{{.Container.Health}}{{else}}-{{end}}</dd>
+                <dt>启动时间</dt>
+                <dd>{{.Container.StartedAt | formatTime}}</dd>
+                <dt>重启次数</dt>
+                <dd>{{.Container.RestartCount}}</dd>
+            </dl>
+        </div>
+
+        <div class="info-card metrics-card">
+            <h3>实时指标</h3>
+            <div class="metric">
+                <span class="label">CPU</span>
+                <span class="value">{{.Container.CpuPercent | fmtPercent}}</span>
+            </div>
+            <div class="metric">
+                <span class="label">内存</span>
+                <span class="value">{{.Container.MemUsage | humanizeBytes}} / {{.Container.MemLimit | humanizeBytes}} （{{.Container.MemPercent | fmtPercent}}）</span>
+            </div>
+            <div class="metric">
+                <span class="label">网络 ↓</span>
+                <span class="value"> {{.Container.NetRxRate | humanizeRate}} ↓ / {{.Container.NetTxRate | humanizeRate}} ↑</span>
+            </div>
+            <div class="metric">
+                <span class="label">磁盘读/写</span>
+                <span class="value">{{.Container.BlkReadRate | humanizeRate}} / {{.Container.BlkWriteRate | humanizeRate}}</span>
+            </div>
+            <div class="metric">
+                <span class="label">进程数</span>
+                <span class="value">{{.Container.PidsCurrent}}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网卡与 IP -->
+    <div class="docker-panel">
+        <h3>网卡与 IP</h3>
+        {{if .Container.NetworkInterfaces}}
+        <table class="server-table">
+            <thead>
+                <tr>
+                    <th>网卡名称</th>
+                    <th>IP 地址</th>
+                    <th>网关</th>
+                    <th>MAC 地址</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Container.NetworkInterfaces}}
+                <tr>
+                    <td><code>{{.Name}}</code></td>
+                    <td>{{if .IpAddress}}{{.IpAddress}}{{else}}-{{end}}</td>
+                    <td class="muted">{{if .Gateway}}{{.Gateway}}{{else}}-{{end}}</td>
+                    <td class="muted">{{if .MacAddress}}{{.MacAddress}}{{else}}-{{end}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty-state"><p>无网卡信息</p></div>
+        {{end}}
+    </div>
+
+    <!-- 端口映射 -->
+    <div class="docker-panel">
+        <h3>端口映射</h3>
+        {{if .Container.PortBindings}}
+        <table class="server-table">
+            <thead>
+                <tr>
+                    <th>容器端口</th>
+                    <th>宿主映射</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range $port, $binds := .Container.PortBindings}}
+                <tr>
+                    <td>{{$port}}</td>
+                    <td>{{range $binds.Host}}{{.}} {{end}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty-state"><p>无端口映射</p></div>
+        {{end}}
+    </div>
+
+    <!-- 挂载 -->
+    <div class="docker-panel">
+        <h3>挂载</h3>
+        {{if .Container.Mounts}}
+        <table class="server-table">
+            <thead>
+                <tr>
+                    <th>类型</th>
+                    <th>源</th>
+                    <th>目标</th>
+                    <th>读写</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Container.Mounts}}
+                <tr>
+                    <td>{{.Type}}</td>
+                    <td class="muted">{{.Source}}</td>
+                    <td>{{.Destination}}</td>
+                    <td>{{if .Rw}}读写{{else}}只读{{end}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty-state"><p>无挂载</p></div>
+        {{end}}
+    </div>
+
+    <!-- 环境变量 -->
+    <div class="docker-panel">
+        <h3>环境变量</h3>
+        {{if .Container.Env}}
+        <pre class="env-pre">{{range .Container.Env}}{{.}}
+{{end}}</pre>
+        {{else}}
+        <div class="empty-state"><p>无环境变量</p></div>
+        {{end}}
+    </div>
+    {{end}}
+</main>
+
+{{template "foot" .}}
+{{end}}

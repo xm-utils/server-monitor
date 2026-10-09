@@ -1,0 +1,80 @@
+{{define "docker_detail.html"}}
+<!DOCTYPE html>
+<html>
+{{template "head" .}}
+<body>
+<div class="container">
+  {{template "topbar" .}}
+
+  {{if .NotFound}}
+    <div class="panel"><div class="empty">未找到容器，可能已停止或未采集到。 <a href="/monitor/docker">返回 Docker 列表</a></div></div>
+  {{else}}
+  <div class="panel">
+    <h3>{{.Container.Name}} <span class="muted">{{.Container.ContainerID}}</span>
+      <span class="badge {{.Container.State}}">{{.Container.State}}</span>
+    </h3>
+    {{if .OpsEnabled}}
+    <div style="margin-bottom:12px;">
+      {{if eq .Container.State "running"}}
+        <button class="btn" onclick="smsOp('{{.Container.ContainerID}}','restart')">重启</button>
+        <button class="btn danger" onclick="smsOp('{{.Container.ContainerID}}','stop')">停止</button>
+      {{else}}
+        <button class="btn" onclick="smsOp('{{.Container.ContainerID}}','start')">启动</button>
+      {{end}}
+      <button class="btn warn" onclick="smsOp('{{.Container.ContainerID}}','redeploy')">重建/重新部署</button>
+    </div>
+    {{end}}
+    <pre id="op-result" class="op-result" hidden></pre>
+    <table>
+      <tr><th>镜像</th><td>{{.Container.Image}}</td></tr>
+      <tr><th>状态文本</th><td>{{.Container.Status}}</td></tr>
+      <tr><th>健康</th><td>{{.Container.Health}}</td></tr>
+      <tr><th>启动时间</th><td>{{fmtTime .Container.StartedAt}}</td></tr>
+      <tr><th>重启次数</th><td>{{.Container.RestartCount}}</td></tr>
+      <tr><th>CPU%</th><td>{{fmtPercent .Container.CPUPercent}}</td></tr>
+      <tr><th>内存</th><td>{{humanizeBytes .Container.MemUsageBytes}} / {{humanizeBytes .Container.MemLimitBytes}}（{{fmtPercent .Container.MemPercent}}）</td></tr>
+      <tr><th>网络速率</th><td>↓ {{humanizeRate .Container.NetRxRate}} · ↑ {{humanizeRate .Container.NetTxRate}}</td></tr>
+      <tr><th>磁盘速率</th><td>读 {{humanizeRate .Container.BlkReadRate}} · 写 {{humanizeRate .Container.BlkWriteRate}}</td></tr>
+      <tr><th>进程数</th><td>{{.Container.PidsCurrent}}</td></tr>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>端口映射</h3>
+    <table>
+      <thead><tr><th>容器端口</th><th>宿主映射</th></tr></thead>
+      <tbody>
+      {{range $port, $binds := .Container.PortBindings}}
+        <tr><td>{{$port}}</td><td>{{range $binds}}{{.}} {{end}}</td></tr>
+      {{else}}
+        <tr><td colspan="2" class="empty">无端口映射</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>挂载</h3>
+    <table>
+      <thead><tr><th>类型</th><th>源</th><th>目标</th><th>读写</th></tr></thead>
+      <tbody>
+      {{range .Container.Mounts}}
+        <tr><td>{{.Type}}</td><td class="muted">{{.Source}}</td><td>{{.Destination}}</td><td>{{if .RW}}读写{{else}}只读{{end}}</td></tr>
+      {{else}}
+        <tr><td colspan="4" class="empty">无挂载</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3>环境变量</h3>
+    <pre>{{range .Container.Env}}{{.}}
+{{end}}</pre>
+  </div>
+  {{end}}
+</div>
+{{template "foot" .}}
+</body>
+</html>
+{{end}}

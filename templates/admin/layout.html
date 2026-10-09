@@ -1,0 +1,26 @@
+{{define "head"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Server Monitor</title>
+    <link rel="stylesheet" href="/static/admin/style.css">
+</head>
+<body>
+{{end}}
+
+{{define "topbar"}}
+<header class="topbar">
+    <h1>🖥️ Server Monitor Admin</h1>
+    <nav>
+        <a href="/">服务器列表</a>
+    </nav>
+</header>
+{{end}}
+
+{{define "foot"}}
+    <script src="/static/admin/admin.js"></script>
+</body>
+</html>
+{{end}}
