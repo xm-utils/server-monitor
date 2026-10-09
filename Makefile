@@ -6,7 +6,7 @@ PKG_SERVER := server_monitor_service/cmd/server-monitor
 PKG_ADMIN := server_monitor_service/cmd/admin-monitor
 LDFLAGS := -ldflags "-s -w -X server_monitor_service/internal/server.buildVersion=$(VERSION)"
 
-.PHONY: all build build-server build-admin build-linux build-linux-server build-linux-admin run-server run-admin proto tidy clean test
+.PHONY: all build build-server build-admin build-linux build-linux-server build-linux-admin build-linux-arm64 run-server run-admin proto tidy clean test
 
 all: build
 
@@ -21,7 +21,7 @@ build-admin:
 	@mkdir -p $(BUILD_DIR)
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_ADMIN) $(PKG_ADMIN)
 
-# 交叉编译 Linux 静态二进制
+# 交叉编译 Linux amd64 静态二进制
 build-linux: build-linux-server build-linux-admin
 
 build-linux-server:
@@ -31,6 +31,12 @@ build-linux-server:
 build-linux-admin:
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_ADMIN)-linux-amd64 $(PKG_ADMIN)
+
+# 交叉编译 Linux arm64
+build-linux-arm64:
+	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_SERVER)-linux-arm64 $(PKG_SERVER)
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_ADMIN)-linux-arm64 $(PKG_ADMIN)
 
 # 运行
 run-server:

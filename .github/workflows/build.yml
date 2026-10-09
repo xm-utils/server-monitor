@@ -1,0 +1,110 @@
+name: Build Linux Binaries
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.24'
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            goarch: amd64
+          - arch: arm64
+            goarch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Linux binaries
+        env:
+          CGO_ENABLED: '0'
+          GOOS: 'linux'
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+          LDFLAGS="-s -w -X server_monitor_service/internal/server.buildVersion=${VERSION}"
+
+          mkdir -p bin
+          go build -ldflags "${LDFLAGS}" -o bin/server-monitor-linux-${{ matrix.goarch }} ./cmd/server-monitor
+          go build -ldflags "${LDFLAGS}" -o bin/admin-monitor-linux-${{ matrix.goarch }}  ./cmd/admin-monitor
+
+      - name: Verify binaries
+        run: |
+          file bin/*
+          ls -lh bin/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-monitor-linux-${{ matrix.goarch }}
+          path: |
+            bin/server-monitor-linux-${{ matrix.goarch }}
+            bin/admin-monitor-linux-${{ matrix.goarch }}
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          cp artifacts/server-monitor-linux-amd64/* release/
+          cp artifacts/server-monitor-linux-arm64/* release/
+          # Generate checksums
+          cd release
+          sha256sum server-monitor-linux-amd64 \
+                     admin-monitor-linux-amd64 \
+                     server-monitor-linux-arm64 \
+                     admin-monitor-linux-arm64 > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+          body: |
+            ## Server Monitor ${{ github.ref_name }}
+
+            ### 下载说明
+            - `server-monitor-linux-amd64` — 服务端 (x86_64)
+            - `admin-monitor-linux-amd64` — 管理端 (x86_64)
+            - `server-monitor-linux-arm64` — 服务端 (ARM64)
+            - `admin-monitor-linux-arm64` — 管理端 (ARM64)
+
+            ### 安装
+            ```bash
+            chmod +x server-monitor-linux-amd64
+            sudo mv server-monitor-linux-amd64 /usr/local/bin/server-monitor
+            ```
